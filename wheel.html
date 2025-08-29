@@ -45,11 +45,17 @@
       border: 2px solid black;
     }
 
-    .output {
+    .output-container {
+      display: flex;
+      align-items: flex-start;
+      margin-top: 20px;
+      gap: 30px;
+    }
+    
+    .output-details {
       display: flex;
       flex-direction: column;
       align-items: center;
-      margin-top: 20px;
     }
 
     .color-preview {
@@ -59,9 +65,23 @@
       background-color: white;
     }
 
-    .cmyk-values {
+    .cmyk-values, .hex-rgb-values {
       font-size: 16px;
       margin-top: 10px;
+    }
+    
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(10, 10px);
+      width: 100px;
+      height: 100px;
+      border: 1px solid #ccc;
+      margin-top: 20px;
+    }
+
+    .grid-cell {
+      width: 10px;
+      height: 10px;
     }
 
   </style>
@@ -71,20 +91,26 @@
     <canvas id="circleCanvas" width="600" height="600"></canvas>
     
     <!-- Draggable tabs -->
-    <div class="tab" id="tab-c" style="background: #0099ff; top: 100px; left: 100px;" data-color="cyan"></div>
-    <div class="tab" id="tab-m" style="background: #ff0099; top: 100px; left: 200px;" data-color="magenta"></div>
-    <div class="tab" id="tab-y" style="background: #ffff00; top: 100px; left: 300px;" data-color="yellow"></div>
+    <div class="tab" id="tab-c" style="background: #00FFFF;" data-color="cyan"></div>
+    <div class="tab" id="tab-m" style="background: #FF00FF;" data-color="magenta"></div>
+    <div class="tab" id="tab-y" style="background: #FFFF00;" data-color="yellow"></div>
+    <div class="tab" id="tab-k" style="background: #000000; border: 2px solid white;" data-color="black"></div>
   </div>
 
-  <div class="output">
-    <div class="color-preview"></div>
-    <div class="cmyk-values">C: 0% M: 0% Y: 0%</div>
+  <div class="output-container">
+      <div class="output-details">
+        <div class="color-preview"></div>
+        <div class="cmyk-values">C: 0% M: 0% Y: 0% K: 0%</div>
+        <div class="hex-rgb-values">HEX: #FFFFFF, RGB: rgb(255, 255, 255)</div>
+      </div>
+      <div class="grid-container" id="grid-container"></div>
   </div>
 
   <script>
     const canvas = document.getElementById("circleCanvas");
     const ctx = canvas.getContext("2d");
     const mainContainer = document.querySelector(".main-container");
+    const gridContainer = document.getElementById("grid-container");
     
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
@@ -95,6 +121,7 @@
     const tabs = document.querySelectorAll(".tab");
     const colorPreview = document.querySelector(".color-preview");
     const cmykValuesText = document.querySelector(".cmyk-values");
+    const hexRgbValuesText = document.querySelector(".hex-rgb-values");
     
     let isDragging = false;
     let activeTab = null;
@@ -103,7 +130,8 @@
     const cmyk = {
       cyan: 0,
       magenta: 0,
-      yellow: 0
+      yellow: 0,
+      black: 0
     };
 
     function drawCircle() {
@@ -135,15 +163,82 @@
       });
     }
 
+    function cmykToRgb(c, m, y, k) {
+      const r = Math.round(255 * (1 - c / 100) * (1 - k / 100));
+      const g = Math.round(255 * (1 - m / 100) * (1 - k / 100));
+      const b = Math.round(255 * (1 - y / 100) * (1 - k / 100));
+      return { r, g, b };
+    }
+    
+    function rgbToHex(r, g, b) {
+        return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
+    }
+
     function updateColor() {
-      const c = cmyk.cyan / 100;
-      const m = cmyk.magenta / 100;
-      const y = cmyk.yellow / 100;
-      const r = Math.round(255 * (1 - c) * (1 - m));
-      const g = Math.round(255 * (1 - y) * (1 - m));
-      const b = Math.round(255 * (1 - c) * (1 - y));
+      const { r, g, b } = cmykToRgb(cmyk.cyan, cmyk.magenta, cmyk.yellow, cmyk.black);
+      const hex = rgbToHex(r, g, b);
       colorPreview.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
-      cmykValuesText.textContent = `C: ${cmyk.cyan}% M: ${cmyk.magenta}% Y: ${cmyk.yellow}%`;
+      cmykValuesText.textContent = `C: ${cmyk.cyan}% M: ${cmyk.magenta}% Y: ${cmyk.yellow}% K: ${cmyk.black}%`;
+      hexRgbValuesText.textContent = `HEX: ${hex}, RGB: rgb(${r}, ${g}, ${b})`;
+      updateGrid();
+    }
+    
+    function updateGrid() {
+        gridContainer.innerHTML = '';
+        const cells = Array(100).fill(null);
+        
+        let cCount = cmyk.cyan;
+        let mCount = cmyk.magenta;
+        let yCount = cmyk.yellow;
+        let kCount = cmyk.black;
+        
+        const cColor = '#00FFFF';
+        const mColor = '#FF00FF';
+        const yColor = '#FFFF00';
+        const kColor = '#000000';
+        const white = '#FFFFFF';
+        
+        for (let i = 0; i < 100; i++) {
+            let color = white;
+            if (cCount > 0) {
+                color = cColor;
+                cCount--;
+            } else if (mCount > 0) {
+                color = mColor;
+                mCount--;
+            } else if (yCount > 0) {
+                color = yColor;
+                yCount--;
+            } else if (kCount > 0) {
+                color = kColor;
+                kCount--;
+            }
+            cells[i] = color;
+        }
+
+        cells.forEach(cellColor => {
+            const cell = document.createElement('div');
+            cell.classList.add('grid-cell');
+            cell.style.backgroundColor = cellColor;
+            gridContainer.appendChild(cell);
+        });
+    }
+    
+    function setInitialTabPositions() {
+      const positions = {
+        cyan: { x: centerX, y: centerY - radius },
+        magenta: { x: centerX + 50, y: centerY - radius },
+        yellow: { x: centerX + 100, y: centerY - radius },
+        black: { x: centerX + 150, y: centerY - radius }
+      };
+      
+      tabs.forEach(tab => {
+        const color = tab.dataset.color;
+        if (positions[color]) {
+          tab.style.top = `${positions[color].y - tab.offsetHeight / 2}px`;
+          tab.style.left = `${positions[color].x - tab.offsetWidth / 2}px`;
+        }
+      });
     }
 
     tabs.forEach(tab => {
@@ -205,6 +300,7 @@
 
     // Initial setup
     drawCircle();
+    setInitialTabPositions();
     updateColor();
   </script>
 </body>
