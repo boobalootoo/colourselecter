@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Color Wheel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        canvas {
+            touch-action: none; /* Prevents default browser actions like scrolling on touch */
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-md bg-gray-800 rounded-xl shadow-lg p-6 flex flex-col items-center space-y-6">
+        <h1 class="text-3xl font-bold text-center">Color Picker</h1>
+        <p class="text-gray-400 text-center">Click or tap on the wheel to select a color.</p>
+
+        <canvas id="color-wheel-canvas" class="w-full h-auto max-w-xs aspect-square cursor-pointer rounded-full border-4 border-gray-700"></canvas>
+
+        <div id="color-display-container" class="w-full flex flex-col items-center space-y-4">
+            <div id="selected-color-box" class="w-24 h-24 rounded-full shadow-inner border-2 border-gray-600 transition-all duration-200"></div>
+
+            <div class="w-full bg-gray-700 rounded-lg p-3 space-y-2">
+                <div class="flex items-center justify-between">
+                    <span class="font-medium text-gray-300">HEX:</span>
+                    <span id="hex-value" class="font-mono text-lg text-white">#000000</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="font-medium text-gray-300">RGB:</span>
+                    <span id="rgb-value" class="font-mono text-lg text-white">rgb(0, 0, 0)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('color-wheel-canvas');
+        const ctx = canvas.getContext('2d');
+        const selectedColorBox = document.getElementById('selected-color-box');
+        const hexValue = document.getElementById('hex-value');
+        const rgbValue = document.getElementById('rgb-value');
+
+        // Function to draw the color wheel
+        function drawColorWheel() {
+            const size = Math.min(canvas.offsetWidth, canvas.offsetHeight);
+            canvas.width = size;
+            canvas.height = size;
+
+            const centerX = size / 2;
+            const centerY = size / 2;
+            const radius = size / 2;
+
+            ctx.clearRect(0, 0, size, size);
+
+            // Draw the color wheel
+            for (let angle = 0; angle < 360; angle++) {
+                const startAngle = (angle - 2) * Math.PI / 180;
+                const endAngle = (angle + 2) * Math.PI / 180;
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+                ctx.closePath();
+                ctx.fillStyle = `hsl(${angle}, 100%, 50%)`;
+                ctx.fill();
+            }
+
+            // Draw a saturation gradient overlay from white to transparent
+            const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+            gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+        }
+
+        function updateColor(event) {
+            const rect = canvas.getBoundingClientRect();
+            let x, y;
+
+            if (event.touches) {
+                x = event.touches[0].clientX - rect.left;
+                y = event.touches[0].clientY - rect.top;
+            } else {
+                x = event.clientX - rect.left;
+                y = event.clientY - rect.top;
+            }
+
+            const pixelData = ctx.getImageData(x, y, 1, 1).data;
+            const r = pixelData[0];
+            const g = pixelData[1];
+            const b = pixelData[2];
+
+            const hex = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+            const rgb = `rgb(${r}, ${g}, ${b})`;
+
+            selectedColorBox.style.backgroundColor = hex;
+            hexValue.textContent = hex.toUpperCase();
+            rgbValue.textContent = rgb;
+        }
+
+        // Set up event listeners for both mouse and touch
+        canvas.addEventListener('mousedown', (e) => {
+            updateColor(e);
+            canvas.addEventListener('mousemove', updateColor);
+        });
+        canvas.addEventListener('mouseup', () => {
+            canvas.removeEventListener('mousemove', updateColor);
+        });
+        canvas.addEventListener('mouseleave', () => {
+            canvas.removeEventListener('mousemove', updateColor);
+        });
+
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent scrolling
+            updateColor(e);
+            canvas.addEventListener('touchmove', updateColor);
+        });
+        canvas.addEventListener('touchend', () => {
+            canvas.removeEventListener('touchmove', updateColor);
+        });
+        canvas.addEventListener('touchcancel', () => {
+            canvas.removeEventListener('touchmove', updateColor);
+        });
+
+
+        // Initial draw and resize listener
+        window.addEventListener('load', drawColorWheel);
+        window.addEventListener('resize', drawColorWheel);
+    </script>
+</body>
+</html>
