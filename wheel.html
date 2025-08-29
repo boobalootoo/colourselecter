@@ -168,8 +168,20 @@
       const dx = e.clientX - circleCenter.x;
       const dy = e.clientY - circleCenter.y;
       
-      const angle = Math.atan2(dy, dx);
-      const percentage = Math.round(((angle * 180 / Math.PI) + 180) / 3.6);
+      let angle = Math.atan2(dy, dx);
+      
+      // Convert angle to a 0-360 range, starting from the top (12 o'clock) and going clockwise.
+      let degrees = angle * (180 / Math.PI);
+      degrees = (degrees + 450) % 360; 
+
+      // Constrain percentage to 0-100% within a specific arc.
+      const arcEndDegrees = 327.27; // Approximately 100% label position (10/11 * 360)
+      let percentage = 0;
+      if (degrees > arcEndDegrees) {
+        percentage = 0;
+      } else {
+        percentage = Math.round((degrees / arcEndDegrees) * 100);
+      }
       
       cmyk[activeColor] = Math.max(0, Math.min(100, percentage));
       
